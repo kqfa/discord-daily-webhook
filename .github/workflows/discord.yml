@@ -1,0 +1,44 @@
+
+name: Salih Askerlik Sayaci
+
+on:
+  schedule:
+    - cron: "0 21 * * *"
+  workflow_dispatch:
+
+jobs:
+  send-message:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Calculate day and send message
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          export TZ=Europe/Istanbul
+
+          START_DATE="2026-10-18"
+          TODAY=$(date +%F)
+
+          START=$(date -d "$START_DATE" +%s)
+          NOW=$(date -d "$TODAY" +%s)
+          ELAPSED=$(( (NOW - START) / 86400 ))
+
+          if [ "$ELAPSED" -lt 0 ]; then
+            ELAPSED=0
+          fi
+
+          DAY=$((14 + ELAPSED))
+          LEFT=$((166 - ELAPSED))
+
+          if [ "$LEFT" -lt 0 ]; then
+            LEFT=0
+          fi
+
+          MESSAGE=$(printf "SALİHİN ASKERLİKTEKİ %s. GÜNÜ\ngeriye kalan (%s)" "$DAY" "$LEFT")
+
+          jq -n --arg content "$MESSAGE" '{content: $content}' > payload.json
+
+          curl -fsS -H "Content-Type: application/json" \
+            -X POST \
+            --data-binary @payload.json \
+            "$DISCORD_WEBHOOK"
